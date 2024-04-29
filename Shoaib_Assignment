@@ -1,0 +1,149 @@
+Step 1 : Delete Vote Pod 
+	Command Used: kubectl delete pod vote-7d884dd585-hn7jv
+  Output: pod "vote-7d884dd585-hn7jv" deleted
+  Observations:
+                [Before Deleting POD]
+                root@ip-172-31-43-66:~# kubectl get po
+                NAME                      READY   STATUS    RESTARTS   AGE
+                vote-7d884dd585-hn7jv     1/1     Running   0          2d22h
+
+                [After Deleting POD]
+                root@ip-172-31-43-66:~# kubectl get po
+                NAME                      READY   STATUS    RESTARTS   AGE
+                vote-7d884dd585-mtgpf     1/1     Running   0          18s
+
+		Automatic Recreation:
+		   - Within a few moments, Kubernetes automatically recreates a new VOTE pod to replace the deleted one.
+		   - The new pod is assigned a unique name and starts initializing, pulling container images, and configuring itself based on the deployment specifications.
+		   - Once the new pod is ready, it becomes part of the running pods in the cluster and starts serving traffic.
+		Analysis:
+		   Maintaining Desired State:
+		   - Kubernetes uses deployment configurations and replica sets to define the desired number of pods for each component in your application.
+		   - When a pod is deleted, Kubernetes detects the deviation from the desired state and initiates pod recreation to restore the desired replica count.
+
+		root@ip-172-31-43-66:~# kubectl get events
+		LAST SEEN   TYPE     REASON             OBJECT                       MESSAGE
+		2m42s       Normal   Killing            pod/vote-7d884dd585-hn7jv    Stopping container vote
+		2m41s       Normal   Scheduled          pod/vote-7d884dd585-mtgpf    Successfully assigned de
+		2m40s       Normal   Pulled             pod/vote-7d884dd585-mtgpf    Container image "dockers
+		2m40s       Normal   Created            pod/vote-7d884dd585-mtgpf    Created container vote
+		2m40s       Normal   Started            pod/vote-7d884dd585-mtgpf    Started container vote
+		2m41s       Normal   SuccessfulCreate   replicaset/vote-7d884dd585   Created pod: vote-7d884d
+*************************************************************************************************************************************************************************************************
+
+Step 2 : Delete Worker Pod
+	Command used : kubectl delete pod worker-6fc5d5b668-wqvn6
+	Output: pod "worker-6fc5d5b668-wqvn6" deleted
+
+		[Before Deleting POD]
+	 	root@ip-172-31-43-66:~# kubectl get po
+		NAME                      READY   STATUS    RESTARTS   AGE
+		worker-6fc5d5b668-wqvn6   1/1     Running   0          66m
+		
+		[After Deleting POD]
+		root@ip-172-31-43-66:~# kubectl get po
+		NAME                      READY   STATUS    RESTARTS   AGE
+		worker-6fc5d5b668-lb8q7   1/1     Running   0          32s
+
+	root@ip-172-31-43-66:~# kubectl describe deployment worker
+		  Conditions:
+		  Type           Status  Reason
+		  ----           ------  ------
+		  Progressing    True    NewReplicaSetAvailable
+		  Available      True    MinimumReplicasAvailable
+		  OldReplicaSets:  <none>
+		  NewReplicaSet:   worker-6fc5d5b668 (1/1 replicas created)
+		  Events:          <none>
+
+	root@ip-172-31-43-66:~# kubectl get events
+		LAST SEEN   TYPE     REASON             OBJECT                         MESSAGE
+		12m         Normal   Scheduled          pod/worker-6fc5d5b668-lb8q7    Successfully assigned default/worker-6fc5d5b668-lb8q7 to ip-172-31-34-160
+		12m         Normal   Pulling            pod/worker-6fc5d5b668-lb8q7    Pulling image "dockersamples/examplevotingapp_worker"
+		12m         Normal   Pulled             pod/worker-6fc5d5b668-lb8q7    Successfully pulled image "dockersamples/examplevotingapp_worker" in 1.911035285s (1.911048856s including waiting)
+		12m         Normal   Created            pod/worker-6fc5d5b668-lb8q7    Created container worker
+		12m         Normal   Started            pod/worker-6fc5d5b668-lb8q7    Started container worker
+		12m         Normal   Killing            pod/worker-6fc5d5b668-wqvn6    Stopping container worker
+		12m         Normal   SuccessfulCreate   replicaset/worker-6fc5d5b668   Created pod: worker-6fc5d5b668-lb8q7
+
+
+		The Kubernetes API server receives the delete pod request and processes it based on your permissions and the cluster's configuration.
+		Worker deployment configuration includes a desired replica count greater than zero for the deleted pod's type, Kubernetes initiates the recreation process.
+   		- Kubernetes schedules a new pod to replace the deleted one, following the deployment's specifications and resource availability.
+*************************************************************************************************************************************************************************************************
+ 
+ 	
+# what happens after db pod deletion?
+
+step 3: Delete dp Pod
+	Command used : kubectl delete pod db-58cc845644-jxljz
+	Output: pod "db-58cc845644-jxljz" deleted
+		[Before Deleting POD]
+		root@ip-172-31-43-66:~# kubectl get po
+		NAME                      READY   STATUS    RESTARTS   AGE
+		db-58cc845644-jxljz       1/1     Running   0          3d1h
+		redis-6878558678-n6rxx    1/1     Running   0          3d1h
+		result-86bc6f7b5d-kltp6   1/1     Running   0          3d1h
+		vote-7d884dd585-mtgpf     1/1     Running   0          166m
+		worker-6fc5d5b668-lb8q7   1/1     Running   0          32s
+
+		[After Deleting POD]
+		root@ip-172-31-43-66:~# kubectl get po
+		NAME                      READY   STATUS    RESTARTS     AGE
+		db-58cc845644-fc68b       1/1     Running   0            32s
+		redis-6878558678-n6rxx    1/1     Running   0            3d1h
+		result-86bc6f7b5d-kltp6   1/1     Running   1 (3s ago)   3d1h
+		vote-7d884dd585-mtgpf     1/1     Running   0            3h7m
+		worker-6fc5d5b668-lb8q7   0/1     Error     0            22m
+
+		[ After Some time ]
+		root@ip-172-31-43-66:~# kubectl get po
+		NAME                      READY   STATUS    RESTARTS      AGE
+		db-58cc845644-fc68b       1/1     Running   0             58s
+		redis-6878558678-n6rxx    1/1     Running   0             3d1h
+		result-86bc6f7b5d-kltp6   1/1     Running   1 (29s ago)   3d1h
+		vote-7d884dd585-mtgpf     1/1     Running   0             3h7m
+		worker-6fc5d5b668-lb8q7   1/1     Running   1 (29s ago)   22m
+
+
+		root@ip-172-31-43-66:~# kubectl get events
+		LAST SEEN   TYPE     REASON             OBJECT                         MESSAGE
+		104s        Normal   Scheduled          pod/db-58cc845644-fc68b        Successfully assigned default/db-58cc845644-fc68b to ip-172-31-34-160
+		103s        Normal   Pulled             pod/db-58cc845644-fc68b        Container image "postgres:9.3" already present on machine
+		103s        Normal   Created            pod/db-58cc845644-fc68b        Created container db
+		103s        Normal   Started            pod/db-58cc845644-fc68b        Started container db
+		105s        Normal   Killing            pod/db-58cc845644-jxljz        Stopping container db
+		104s        Normal   SuccessfulCreate   replicaset/db-58cc845644       Created pod: db-58cc845644-fc68b
+		74s         Normal   Created            pod/result-86bc6f7b5d-kltp6    Created container result
+		74s         Normal   Started            pod/result-86bc6f7b5d-kltp6    Started container result
+		74s         Normal   Pulled             pod/result-86bc6f7b5d-kltp6    Container image "dockersamples/examplevotingapp_result:before" already present on machine
+		23m         Normal   Scheduled          pod/worker-6fc5d5b668-lb8q7    Successfully assigned default/worker-6fc5d5b668-lb8q7 to ip-172-31-34-160
+		74s         Normal   Pulling            pod/worker-6fc5d5b668-lb8q7    Pulling image "dockersamples/examplevotingapp_worker"
+		23m         Normal   Pulled             pod/worker-6fc5d5b668-lb8q7    Successfully pulled image "dockersamples/examplevotingapp_worker" in 1.911035285s (1.911048856s including waiting)
+		72s         Normal   Created            pod/worker-6fc5d5b668-lb8q7    Created container worker
+		72s         Normal   Started            pod/worker-6fc5d5b668-lb8q7    Started container worker
+		72s         Normal   Pulled             pod/worker-6fc5d5b668-lb8q7    Successfully pulled image "dockersamples/examplevotingapp_worker" in 1.91526292s (1.915275013s including waiting)
+		23m         Normal   Killing            pod/worker-6fc5d5b668-wqvn6    Stopping container worker
+		23m         Normal   SuccessfulCreate   replicaset/worker-6fc5d5b668   Created pod: worker-6fc5d5b668-lb8q7
+
+		Event Explantaion :
+		1. Killing Event for DB Pod :
+	   	   - The "Killing" event for the DB pod indicates that Kubernetes initiated the termination process for this pod.
+	  	   - Kubernetes typically kills a pod when it needs to remove or replace it, such as during scaling operations, pod updates, or maintenance tasks.
+	 
+		2. Successful Creation of New DB Pod:
+		   - After the "Killing" event, Kubernetes successfully created a new DB pod  to replace the deleted one.
+		   - This new pod was scheduled, pulled its container image, created the container, and started successfully.
+ 
+ 		  the events occurred because Kubernetes responded to the deletion of the DB pod by terminating it, creating a new pod to maintain the desired state or replica count
+		  and ensuring the continuity and availability of services in cluster.examplevotingapp_worker, created the container, and started.
+		   - Another Worker pod was killed, likely part of a recreation or scaling operation.
+*************************************************************************************************************************************************************************************************
+
+   # complete the assignment by making the result pod work ?
+
+   -> The result Pod will be deleted and Recreated autometically Because inside /root/example-voting-app/result/server.js
+      async.retry: This function is part of the async-retry library. It allows you to retry an asynchronous operation (such as connecting to a database) 
+      a specified number of times with a given interval between retries.
+
+
+						
